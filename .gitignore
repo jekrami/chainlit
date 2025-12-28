@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-selfcheck.json
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+vector_db.pkl
+rag_chat_history.json
+documents_metadata.json
+
+# Chainlit - ignore only the runtime cache
+.chainlit/.cache
+
+# IDE and OS specific
+.vscode/
+.idea/
+*.DS_Store

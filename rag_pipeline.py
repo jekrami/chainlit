@@ -13,7 +13,6 @@ class RagPipeline:
     def add_documents(self, docs):
         self.documents.extend(docs)
 
-        # Ensure documents are not empty
         valid_docs = [d for d in docs if d.strip()]
         if not valid_docs:
             print("Warning: No valid documents to add.")
@@ -31,37 +30,33 @@ class RagPipeline:
         if not self.index or not self.documents:
             return ""
 
-        # 1. Semantic Search (FAISS)
         query_embedding = self.embedding_model.embed_query(query)
         distances, indices = self.index.search(np.array([query_embedding], dtype='float32'), TOP_K)
 
         retrieved_docs_with_scores = []
         for i, doc_index in enumerate(indices[0]):
-            retrieved_docs_with_scores.append({
-                "doc": self.documents[doc_index],
-                "semantic_score": 1 / (1 + distances[0][i])  # Normalize distance to score
-            })
+            if doc_index < len(self.documents):
+                retrieved_docs_with_scores.append({
+                    "doc": self.documents[doc_index],
+                    "semantic_score": 1 / (1 + distances[0][i])
+                })
 
-        # 2. Keyword Boosting
         for item in retrieved_docs_with_scores:
             keyword_score = 0
             for keyword, boost in KEYWORD_BOOST_CONFIG.items():
                 if keyword in item["doc"]:
                     keyword_score += boost
 
-            # Combine scores (simple weighted average)
             item["final_score"] = item["semantic_score"] + keyword_score
 
-        # 3. Re-rank based on final score
         re_ranked_docs = sorted(retrieved_docs_with_scores, key=lambda x: x["final_score"], reverse=True)
 
-        # Return the document text
         final_docs = [item["doc"] for item in re_ranked_docs]
         return "\n---\n".join(final_docs)
 
     def save(self, path):
         if self.index is None:
-            return # Don't save an empty index
+            return
         with open(path, "wb") as f:
             pickle.dump({
                 "index": faiss.serialize_index(self.index),
