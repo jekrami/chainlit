@@ -1,0 +1,10 @@
+chainlit
+pymupdf
+faiss-cpu
+python-bidi
+arabic_reshaper
+numpy
+requests
+langchain
+langchain_community
+sentence_transformers
