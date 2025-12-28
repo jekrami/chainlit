@@ -1,7 +1,7 @@
 import faiss
 import numpy as np
 import pickle
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama.embeddings import OllamaEmbeddings
 from config import EMBEDDING_MODEL, TOP_K, KEYWORD_BOOST_CONFIG
 
 class RagPipeline:
