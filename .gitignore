@@ -16,8 +16,8 @@ vector_db.pkl
 rag_chat_history.json
 documents_metadata.json
 
-# Chainlit - ignore only the runtime cache
-.chainlit/.cache
+# Chainlit
+.chainlit/
 
 # IDE and OS specific
 .vscode/

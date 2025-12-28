@@ -10,3 +10,4 @@ langchain_community
 sentence_transformers
 langchain-ollama
 langchain-text-splitters
+gradio

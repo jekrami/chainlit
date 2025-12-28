@@ -1,11 +1,13 @@
 # Multi-Model Persian Contract Analyzer
 
-This project is a sophisticated legal analysis tool designed to interpret and answer questions about Iranian legal contracts. It leverages a multi-model Retrieval-Augmented Generation (RAG) pipeline, local Ollama models, and a user-friendly Chainlit interface to provide precise, Persian-first legal analysis.
+This project is a sophisticated legal analysis tool designed to interpret and answer questions about Iranian legal contracts. It leverages a multi-model Retrieval-Augmented Generation (RAG) pipeline, local Ollama models, and a user-friendly interface to provide precise, Persian-first legal analysis.
+
+This repository offers two user interface options: **Chainlit** (a modern, chat-based UI) and **Gradio** (a flexible, component-based UI).
 
 ## Core Features
 
 -   **Persian-First Legal Analysis:** Optimized for the nuances of Iranian contract law, civil law, and commercial agreements.
--   **Chainlit UI:** A modern, chat-based interface for uploading PDF documents and interacting with the system.
+-   **Dual UI Options:** Choose between a sleek Chainlit interface or a functional Gradio interface.
 -   **Multi-Model Reasoning:** Utilizes three distinct Ollama models in parallel (Analyst, Verifier, Synthesizer) to ensure high accuracy and resolve ambiguities.
 -   **RAG Pipeline:** Employs a robust RAG system with `pymupdf` for text extraction, FAISS for vector storage, and a hybrid retrieval model with keyword boosting.
 -   **Local & Private:** All processing is done locally, ensuring the privacy and security of sensitive legal documents. No data is sent to external cloud APIs.
@@ -14,7 +16,7 @@ This project is a sophisticated legal analysis tool designed to interpret and an
 
 The system follows a parallel multi-model architecture:
 
-1.  **User Input:** The user uploads a PDF and asks a question in the Chainlit UI.
+1.  **User Input:** The user uploads a PDF and asks a question in the UI.
 2.  **RAG Retrieval:** The system retrieves the most relevant text chunks from the document using a combination of semantic search and keyword boosting.
 3.  **Parallel Analysis:** The user's question and the retrieved context are sent to two different Ollama models simultaneously:
     *   **Primary Legal Analyst Model** (`partai/dorna-llama3`)
@@ -52,32 +54,42 @@ pip install -r requirements.txt
 
 ## How to Run the Application
 
-1.  **Start the Ollama Server:**
-    Before running the application, ensure the Ollama server is running in the background.
+### 1. Start the Ollama Server
 
-    ```bash
-    ollama serve
-    ```
+Before running the application, ensure the Ollama server is running in the background.
 
-2.  **Run the Chainlit Application:**
-    In a separate terminal, run the following command from the project's root directory:
+```bash
+ollama serve
+```
 
-    ```bash
-    chainlit run app.py
-    ```
+### 2. Choose Your Interface
 
-3.  **Open in Browser:**
-    Open your web browser and navigate to `http://localhost:8000`.
+You can run either the Chainlit or the Gradio version of the application.
 
-4.  **Upload and Analyze:**
-    -   You will be prompted to upload a Persian PDF contract.
-    -   Once the file is processed, you can ask questions about the contract in the chat interface.
+#### To Run the Chainlit Version:
+
+In a separate terminal, run the following command from the project's root directory:
+
+```bash
+chainlit run app.py
+```
+Then, open your web browser and navigate to `http://localhost:8000`.
+
+#### To Run the Gradio Version:
+
+In a separate terminal, run the following command from the project's root directory:
+
+```bash
+python app_gradio.py
+```
+Then, open your web browser and navigate to the local URL provided in the terminal (usually `http://127.0.0.1:7860`).
 
 ## Project Structure
 
 | File                      | Purpose                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------- |
-| `app.py`                  | The main entry point for the Chainlit application. Handles UI and user interaction. |
+| `app.py`                  | The main entry point for the **Chainlit** application.                           |
+| `app_gradio.py`           | The main entry point for the **Gradio** application.                             |
 | `requirements.txt`        | A list of all Python dependencies required for the project.                      |
 | `config.py`               | Stores all configuration variables, such as model names and RAG parameters.      |
 | `document_processor.py`   | Handles PDF parsing, text extraction, RTL correction, and text chunking.           |
