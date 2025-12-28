@@ -1,8 +1,8 @@
 # Ollama models
-PRIMARY_LEGAL_ANALYST_MODEL = "partai/dorna-llama3"
-SECONDARY_VERIFICATION_MODEL = "mshojaei77/gemma3persian"
+PRIMARY_LEGAL_ANALYST_MODEL = "ravin-llama3"
+SECONDARY_VERIFICATION_MODEL = "ravin-gemma3"
 SYNTHESIZER_MODEL = "llama3"
-EMBEDDING_MODEL = "paraphrase-multilingual-mpnet-base-v2"
+EMBEDDING_MODEL = "paraphrase-multilingual:278m-mpnet-base-v2-fp16"
 
 # Ollama API endpoint
 OLLAMA_API_ENDPOINT = "http://localhost:11434/api/generate"

@@ -75,8 +75,8 @@ async def on_chat_start():
                 await msg.update(content=f"خطا در پردازش فایل `{uploaded_file.name}`.")
                 return
 
-            # Add to the global RAG pipeline and save to disk
-            rag_pipeline.add_documents(text_chunks)
+            # Add to the global RAG pipeline with source tracking
+            rag_pipeline.add_documents(text_chunks, source_name=uploaded_file.name)
             rag_pipeline.save(VECTOR_DB_PATH)
 
             # Update and save global metadata
@@ -97,7 +97,8 @@ async def on_message(message: cl.Message):
         await cl.Message(content="هنوز هیچ سندی در پایگاه دانش وجود ندارد.", author="سیستم").send()
         return
 
-    retrieved_context = rag_pipeline.retrieve(message.content)
+    # Retrieve context with source tracking
+    retrieved_context, sources = rag_pipeline.retrieve(message.content, return_sources=True)
 
     if not retrieved_context:
         await cl.Message(content="نتوانستم اطلاعات مرتبطی پیدا کنم.", author="تحلیلگر قرارداد").send()
@@ -107,11 +108,20 @@ async def on_message(message: cl.Message):
     await msg.stream_token("در حال تحلیل... ")
 
     final_answer = await llm_handler.get_synthesized_answer(message.content, retrieved_context)
-    await cl.Message(content=final_answer).send()
+
+    # Add source information to the answer
+    unique_sources = list(set(sources))
+    source_info = "\n\n---\n📄 **منابع استفاده شده:**\n"
+    for src in unique_sources:
+        source_info += f"• {src}\n"
+
+    final_answer_with_sources = final_answer + source_info
+
+    await cl.Message(content=final_answer_with_sources).send()
 
     # Update the session-specific history for the current conversation view
-    session_chat_history.append({"user": message.content, "assistant": final_answer})
+    session_chat_history.append({"user": message.content, "assistant": final_answer_with_sources})
     cl.user_session.set("session_chat_history", session_chat_history)
 
     # Append to the global, persistent chat log
-    append_to_global_chat_history(message.content, final_answer)
+    append_to_global_chat_history(message.content, final_answer_with_sources)
