@@ -1,5 +1,6 @@
 # Ollama models
-PRIMARY_LEGAL_ANALYST_MODEL = "ravin-llama3"
+#PRIMARY_LEGAL_ANALYST_MODEL = "ravin-llama3"
+PRIMARY_LEGAL_ANALYST_MODEL = "qwen2.5:14b-instruct"
 SECONDARY_VERIFICATION_MODEL = "ravin-gemma3"
 SYNTHESIZER_MODEL = "llama3"
 EMBEDDING_MODEL = "paraphrase-multilingual:278m-mpnet-base-v2-fp16"

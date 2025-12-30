@@ -11,6 +11,7 @@ from llm_handler import LlmHandler
 sys.path.append(os.path.join(os.path.dirname(__file__), 'legal_analyzer'))
 from legal_analyzer.orchestrator import run_deep_analysis
 from legal_analyzer.passes import ANALYSIS_PASSES
+from legal_analyzer.presentation import generate_persian_presentation
 import pdfplumber
 import arabic_reshaper
 from bidi.algorithm import get_display
@@ -84,10 +85,16 @@ PASS_TITLES_FA = {
     8: "مرحله ۸ — ارزیابی نهایی قابلیت اجرا"
 }
 
-def run_deep_analysis_with_progress(pdf_file):
+def run_deep_analysis_with_progress(pdf_file, pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8):
     """Run deep legal analysis with progress updates."""
     if pdf_file is None:
         yield None, "❌ لطفاً یک فایل PDF را آپلود کنید.", ""
+        return
+
+    # Check if at least one pass is selected
+    selected_passes = [pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8]
+    if not any(selected_passes):
+        yield None, "❌ لطفاً حداقل یک مرحله تحلیل را انتخاب کنید.", ""
         return
 
     try:
@@ -99,21 +106,29 @@ def run_deep_analysis_with_progress(pdf_file):
             yield None, "❌ خطا: نتوانستم متنی از PDF استخراج کنم.", ""
             return
 
+        # Filter ANALYSIS_PASSES based on selected checkboxes
+        selected_pass_ids = [i+1 for i, selected in enumerate(selected_passes) if selected]
+        filtered_passes = [p for p in ANALYSIS_PASSES if p["id"] in selected_pass_ids]
+
         # Initialize results
         results = {}
         accumulated_context = ""
         progress_html = ""
 
-        # Run each analysis pass
-        for i, p in enumerate(ANALYSIS_PASSES, 1):
+        # Run each selected analysis pass
+        for step_num, p in enumerate(filtered_passes, 1):
             # Update progress
-            progress_html = create_progress_html(i, len(ANALYSIS_PASSES), PASS_TITLES_FA[i])
-            status_msg = f"🔍 در حال اجرای {PASS_TITLES_FA[i]}..."
+            progress_html = create_progress_html(step_num, len(filtered_passes), PASS_TITLES_FA[p["id"]])
+            status_msg = f"🔍 در حال اجرای {PASS_TITLES_FA[p['id']]}..."
             yield progress_html, status_msg, ""
 
             # Prepare prompt
             from legal_analyzer.prompts import MASTER_SYSTEM_PROMPT
             from legal_analyzer.ollama_client import ollama_chat
+
+            # Build the analysis instructions from the new structure
+            allowed_actions = "\n".join([f"  • {item}" for item in p['allowed']])
+            forbidden_actions = "\n".join([f"  • {item}" for item in p['forbidden']])
 
             user_prompt = f"""
 Original contract text (Persian, RTL):
@@ -124,7 +139,21 @@ Original contract text (Persian, RTL):
 
 Current analysis focus:
 {p['title']}
-{p['focus']}
+
+Objective:
+{p['objective']}
+
+You are ALLOWED to:
+{allowed_actions}
+
+You are FORBIDDEN from:
+{forbidden_actions}
+
+Quote Policy: {p['quote_policy']}
+Silence Policy: {p['silence_policy']}
+
+Required Output Format:
+{p['output_format']}
 
 Previous findings (for context only, may be challenged):
 {accumulated_context}
@@ -138,24 +167,39 @@ Previous findings (for context only, may be challenged):
 
             results[p["id"]] = {
                 "title": p["title"],
-                "title_fa": PASS_TITLES_FA[i],
+                "title_fa": PASS_TITLES_FA[p["id"]],
                 "output": output.strip(),
             }
 
             # Accumulate context
             accumulated_context += f"\n\n{p['title']}:\n{output.strip()}"
 
-        # Generate final report
-        progress_html = create_progress_html(8, 8, "✅ تحلیل کامل شد!")
-        final_report = format_analysis_results(results)
-
-        # Save results
+        # Save JSON results first (for presentation layer)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"deep_analysis_{timestamp}.json"
-        with open(output_file, "w", encoding="utf-8") as f:
+        json_file = f"deep_analysis_{timestamp}.json"
+        with open(json_file, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
 
-        yield progress_html, f"✅ تحلیل عمیق با موفقیت کامل شد!\n📁 نتایج در فایل {output_file} ذخیره شد.", final_report
+        # Generate Persian presentation
+        progress_html = create_progress_html(len(filtered_passes), len(filtered_passes), "✅ در حال تولید گزارش فارسی...")
+        yield progress_html, "📝 در حال تبدیل نتایج به گزارش فارسی...", ""
+
+        try:
+            persian_presentation = generate_persian_presentation(
+                analysis_json_path=json_file,
+                output_path="presentation_fa.txt"
+            )
+            
+            # Final progress update
+            progress_html = create_progress_html(len(filtered_passes), len(filtered_passes), "✅ تحلیل کامل شد!")
+            final_status = f"✅ تحلیل عمیق با موفقیت کامل شد!\n📁 نتایج JSON در فایل {json_file} ذخیره شد.\n📄 گزارش فارسی در فایل presentation_fa.txt ذخیره شد."
+            
+            yield progress_html, final_status, persian_presentation
+        except Exception as e:
+            # Fallback to markdown format if presentation generation fails
+            progress_html = create_progress_html(len(filtered_passes), len(filtered_passes), "✅ تحلیل کامل شد!")
+            final_report = format_analysis_results(results)
+            yield progress_html, f"⚠️ تحلیل کامل شد اما خطا در تولید گزارش فارسی: {e}\n📁 نتایج در فایل {json_file} ذخیره شد.", final_report
 
     except Exception as e:
         yield None, f"❌ خطا در تحلیل: {str(e)}", ""
@@ -177,30 +221,6 @@ def create_progress_html(current_step, total_steps, current_title):
             <div style="margin-top: 10px; color: #555;">
                 {current_title}
             </div>
-        </div>
-        <div style="margin-top: 20px;">
-    """
-
-    # Add all steps with status
-    for i in range(1, total_steps + 1):
-        if i < current_step:
-            status = "✅"
-            color = "#4caf50"
-        elif i == current_step:
-            status = "🔄"
-            color = "#ff9800"
-        else:
-            status = "⏳"
-            color = "#9e9e9e"
-
-        html += f"""
-            <div style="padding: 8px; margin: 5px 0; background: {'#e8f5e9' if i < current_step else '#fff'}; border-right: 4px solid {color}; border-radius: 4px;">
-                <span style="font-size: 18px;">{status}</span>
-                <strong>{PASS_TITLES_FA.get(i, f'مرحله {i}')}</strong>
-            </div>
-        """
-
-    html += """
         </div>
     </div>
     """
@@ -433,27 +453,50 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css) as demo:
 
         # Tab 2: Deep Legal Analysis
         with gr.Tab("🔍 تحلیل عمیق حقوقی"):
-            gr.Markdown('<div class="rtl-title"><h3>🔍 تحلیل عمیق حقوقی (۸ مرحله)</h3></div>')
-            gr.Markdown("""
-            <div style="direction: rtl; text-align: right;">
-            این ابزار یک تحلیل جامع و چند مرحله‌ای از قرارداد شما انجام می‌دهد که شامل:
-
-            - تحلیل ساختاری و شکلی
-            - طبقه‌بندی تعهدات
-            - بررسی شرایط مالی و زمانی
-            - تحلیل ریسک و ابهامات
-            - ارزیابی قابلیت اجرا
-
-            **توجه:** این فرآیند ممکن است چند دقیقه طول بکشد.
-            </div>
-            """)
-
+            
             with gr.Row():
                 with gr.Column(scale=1):
                     deep_analysis_file = gr.File(
                         label="آپلود فایل PDF قرارداد",
                         file_types=[".pdf"]
                     )
+                    
+                    # Checkboxes for selecting analysis passes
+                    gr.Markdown('<div class="rtl-title"><h4>انتخاب مراحل تحلیل</h4></div>')
+                    with gr.Group():
+                        pass1_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[1],
+                            value=True
+                        )
+                        pass2_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[2],
+                            value=True
+                        )
+                        pass3_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[3],
+                            value=True
+                        )
+                        pass4_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[4],
+                            value=True
+                        )
+                        pass5_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[5],
+                            value=True
+                        )
+                        pass6_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[6],
+                            value=True
+                        )
+                        pass7_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[7],
+                            value=True
+                        )
+                        pass8_checkbox = gr.Checkbox(
+                            label=PASS_TITLES_FA[8],
+                            value=True
+                        )
+                    
                     deep_analysis_btn = gr.Button(
                         "🚀 شروع تحلیل عمیق",
                         variant="primary",
@@ -531,7 +574,17 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css) as demo:
     # Wire up the components - Tab 2: Deep Legal Analysis
     deep_analysis_btn.click(
         fn=run_deep_analysis_with_progress,
-        inputs=deep_analysis_file,
+        inputs=[
+            deep_analysis_file,
+            pass1_checkbox,
+            pass2_checkbox,
+            pass3_checkbox,
+            pass4_checkbox,
+            pass5_checkbox,
+            pass6_checkbox,
+            pass7_checkbox,
+            pass8_checkbox
+        ],
         outputs=[deep_analysis_progress, deep_analysis_status, deep_analysis_output]
     )
 

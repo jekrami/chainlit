@@ -12,8 +12,12 @@ def ollama_chat(
     top_p: float = 0.9,
 ) -> str:
     """
-    Single, controlled call to Ollama.
-    GPU usage is handled internally by Ollama.
+    - Output language MUST be Persian (Farsi).
+    - Use Persian (Arabic-based) characters ONLY.
+    - DO NOT use Chinese characters, Latin explanations, or mixed language.
+    - If you produce any Chinese characters, the output is INVALID.
+    - Legal terms MUST remain in Persian (e.g. فسخ، انفساخ، وجه التزام).
+   
     """
 
     payload: Dict = {

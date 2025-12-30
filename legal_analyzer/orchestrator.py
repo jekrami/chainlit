@@ -11,6 +11,10 @@ def run_deep_analysis(contract_text: str) -> dict:
     accumulated_context = ""
 
     for p in ANALYSIS_PASSES:
+        # Build the analysis instructions from the new structure
+        allowed_actions = "\n".join([f"  • {item}" for item in p['allowed']])
+        forbidden_actions = "\n".join([f"  • {item}" for item in p['forbidden']])
+        
         user_prompt = f"""
 Original contract text (Persian, RTL):
 
@@ -20,7 +24,21 @@ Original contract text (Persian, RTL):
 
 Current analysis focus:
 {p['title']}
-{p['focus']}
+
+Objective:
+{p['objective']}
+
+You are ALLOWED to:
+{allowed_actions}
+
+You are FORBIDDEN from:
+{forbidden_actions}
+
+Quote Policy: {p['quote_policy']}
+Silence Policy: {p['silence_policy']}
+
+Required Output Format:
+{p['output_format']}
 
 Previous findings (for context only, may be challenged):
 {accumulated_context}
